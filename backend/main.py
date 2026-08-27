@@ -108,7 +108,7 @@ def update_location(data: schemas.LocationCreate, db: Session = Depends(get_db))
 @app.get("/", response_class=HTMLResponse)
 def landing_page(request: Request):
     try:
-        return templates.TemplateResponse("landing.html", {"request": request})
+        return templates.TemplateResponse(request=request, name="landing.html")
     except Exception as e:
         import traceback
         return HTMLResponse(content=f"<pre>Error in landing_page:\n{traceback.format_exc()}</pre>", status_code=500)
@@ -122,7 +122,7 @@ def download_windows():
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="login.html")
 
 @app.post("/login")
 def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
@@ -139,16 +139,16 @@ def login(request: Request, email: str = Form(...), password: str = Form(...), d
         response.set_cookie(key="session_id", value=token, httponly=True)
         return response
         
-    return templates.TemplateResponse("login.html", {"request": request, "error": "Błędny email lub hasło!"})
+    return templates.TemplateResponse(request=request, name="login.html", context={"error": "Błędny email lub hasło!"})
 
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="register.html")
 
 @app.post("/register")
 def register(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     if db.query(models.Parent).filter(models.Parent.email == email).first():
-        return templates.TemplateResponse("register.html", {"request": request, "error": "Ten email jest już zarejestrowany!"})
+        return templates.TemplateResponse(request=request, name="register.html", context={"error": "Ten email jest już zarejestrowany!"})
         
     new_parent = models.Parent(email=email, password_hash=hash_password(password))
     db.add(new_parent)
@@ -160,7 +160,7 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
     db.add(default_rule)
     db.commit()
     
-    return templates.TemplateResponse("login.html", {"request": request, "success": "Konto założone! Możesz się zalogować."})
+    return templates.TemplateResponse(request=request, name="login.html", context={"success": "Konto założone! Możesz się zalogować."})
 
 @app.get("/logout")
 def logout(request: Request, db: Session = Depends(get_db)):
@@ -188,8 +188,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         last_loc = db.query(models.Location).filter(models.Location.device_id == d.id).order_by(models.Location.id.desc()).first()
         if last_loc: locations[d.name] = last_loc
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={
         "parent": parent,
         "rule": rule, 
         "devices": devices, 
