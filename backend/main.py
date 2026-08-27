@@ -16,8 +16,18 @@ from .database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Stealth Parental API (Global)")
+app = FastAPI(title="Stealth Parental API (Global)", debug=True)
 templates = Jinja2Templates(directory="backend/templates")
+
+import traceback
+
+@app.exception_handler(500)
+async def internal_exception_handler(request: Request, exc: Exception):
+    return HTMLResponse(content=f"<pre>Error 500:\n{traceback.format_exc()}</pre>", status_code=500)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return HTMLResponse(content=f"<pre>Unhandled Error:\n{traceback.format_exc()}</pre>", status_code=500)
 
 # Obsługa plików statycznych (np. pobieranie aplikacji)
 os.makedirs("backend/static", exist_ok=True)
@@ -97,7 +107,11 @@ def update_location(data: schemas.LocationCreate, db: Session = Depends(get_db))
 
 @app.get("/", response_class=HTMLResponse)
 def landing_page(request: Request):
-    return templates.TemplateResponse("landing.html", {"request": request})
+    try:
+        return templates.TemplateResponse("landing.html", {"request": request})
+    except Exception as e:
+        import traceback
+        return HTMLResponse(content=f"<pre>Error in landing_page:\n{traceback.format_exc()}</pre>", status_code=500)
 
 @app.get("/download/windows")
 def download_windows():
